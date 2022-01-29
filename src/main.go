@@ -1,34 +1,60 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
+	"context"
+	"dicebot/routes"
+	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"time"
+
+	"github.com/gorilla/mux"
 )
 
 func main() {
-	router := gin.Default()
-	router.GET("/heroes", getHeroes)
-	router.Run("localhost:8080")
-	//fmt.Println(getHeroes()["Hero1"])
-}
+	l := log.New(os.Stdout, "dicebot-api ", log.LstdFlags)
 
-type Hero struct {
-	Name       string         `json:"name"`
-	Class      string         `json:"class"`
-	Race       string         `json:"race"`
-	Gender     string         `json:"gender"`
-	Weight     float64        `json:"weight"`
-	Height     float64        `json:"height"`
-	Hp         int            `json:"hp"`
-	Money      float64        `json:"monye"`
-	Attributes map[string]int `json:"attributes"`
-	Talents    map[string]int `json:"talents"`
-}
+	// create the routes
+	hr := routes.NewHeroes(l)
 
-func getHeroes(c *gin.Context) {
-	attr := map[string]int{"attr": 1, "attr2": 2}
-	talents := map[string]int{"talent": 1}
-	heroes := map[string]Hero{
-		"Hero1": Hero{"test", "test", "test", "test", 10, 20, 30, 40, attr, talents}}
-	c.IndentedJSON(http.StatusOK, heroes)
+	// create a new serve mux and register the handlers
+	sm := mux.NewRouter()
+
+	heroesGetRouter := sm.Methods(http.MethodGet).Subrouter()
+	heroesGetRouter.HandleFunc("/heroes", hr.GetAllHeroes)
+
+	// create a new server
+	s := http.Server{
+		Addr:         ":9090",           // configure the bind address
+		Handler:      sm,                // set the default handler
+		ErrorLog:     l,                 // set the logger for the server
+		ReadTimeout:  5 * time.Second,   // max time to read request from the client
+		WriteTimeout: 10 * time.Second,  // max time to write response to the client
+		IdleTimeout:  120 * time.Second, // max time for connections using TCP Keep-Alive
+	}
+
+	// start the server
+	go func() {
+		l.Println("Starting server on port 9090")
+
+		err := s.ListenAndServe()
+		if err != nil {
+			l.Printf("Error starting server: %s\n", err)
+			os.Exit(1)
+		}
+	}()
+
+	// trap sigterm or interupt and gracefully shutdown the server
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	signal.Notify(c, os.Kill)
+
+	// Block until a signal is received.
+	sig := <-c
+	log.Println("Got signal:", sig)
+
+	// gracefully shutdown the server, waiting max 30 seconds for current operations to complete
+	ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
+	s.Shutdown(ctx)
 }
