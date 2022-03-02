@@ -17,12 +17,16 @@ func main() {
 
 	// create the routes
 	hr := routes.NewHeroes(l)
+	dr := routes.NewDiceRoute(l)
 
 	// create a new serve mux and register the handlers
 	sm := mux.NewRouter()
 
 	heroesGetRouter := sm.Methods(http.MethodGet).Subrouter()
 	heroesGetRouter.HandleFunc("/heroes", hr.GetAllHeroes)
+
+	diceGetRouter := sm.Methods(http.MethodGet).Subrouter()
+	diceGetRouter.HandleFunc("/dice/{face:[0-9]+}/{count:[0-9]+}", dr.RollDice)
 
 	// create a new server
 	s := http.Server{
