@@ -1,0 +1,14 @@
+version: '3.3'
+services:
+  dsa_db:
+    image: mysql:latest
+    container_name: dsa_db
+    restart: always
+    environment:
+      MYSQL_DATABASE: 'dsa_db'
+      MYSQL_ROOT_PASSWORD: '123456'
+      LANG: C.UTF-8
+    ports:
+      - '3306:3306'
+    volumes:
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
