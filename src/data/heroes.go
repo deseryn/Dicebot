@@ -6,7 +6,6 @@ import (
 )
 
 type Hero struct {
-	ID         int            `json:"id"`
 	Name       string         `json:"name"`
 	MaxHp      int            `json:"maxHp"`
 	Hp         int            `json:"hp"`
