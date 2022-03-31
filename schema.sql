@@ -1,13 +1,14 @@
 CREATE TABLE IF NOT EXISTS `heroes` (
 	`name` VARCHAR(50) NOT NULL,
+	`max_hp` INT,
+	`current_hp` INT,
 	`race` VARCHAR(30),
-	`class` VARCHAR(30),
 	`gender` VARCHAR(30),
+	`class` VARCHAR(30),
 	`weight` FLOAT,
 	`height` FLOAT,
-    `max_hp` INT,
-	`current_hp` INT,
 	`money` FLOAT,
+	`talents` INT
 	PRIMARY KEY (`name`)
 );
 
