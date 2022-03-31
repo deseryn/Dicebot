@@ -2,19 +2,14 @@ package db
 
 import (
 	"database/sql"
-	"dicebot/data"
-	"encoding/json"
 	"log"
-
-	_ "github.com/go-sql-driver/mysql"
 )
 
-func DBConnection() (*sql.DB, error) {
+func GetDBConnection() (*sql.DB, error) {
 	db, err := sql.Open("mysql", "root:123456@tcp(localhost:3306)/dsa_db")
 	if err != nil {
-		log.Fatal("Error: Could not open database connection", err)
+		log.Fatal(err.Error())
 	}
-	//defer db.Close()
 
 	return db, err
 }
