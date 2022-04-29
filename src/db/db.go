@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"encoding/json"
 	"log"
 )
 
@@ -24,11 +25,9 @@ func GetHero(hero string) data.Hero {
 		weight float64
 		height float64
 		money float64
-		attributes string
-		talents string
 	)
 
-	db, err := DBConnection()
+	db, err := GetDBConnection()
 	rows, err := db.Query("SELECT * FROM heroes WHERE name = ?", hero)
 	if err != nil {
 		log.Fatal(err)
@@ -39,7 +38,7 @@ func GetHero(hero string) data.Hero {
 	t := map[string]int{}
 
 	for rows.Next() {
-		err := rows.Scan(&name, &maxHp, &hp, &race, &gender, &weight, &height, &money, &attributes, &talents)
+		err := rows.Scan(&name, &maxHp, &hp, &race, &gender, &weight, &height, &money)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -47,16 +46,30 @@ func GetHero(hero string) data.Hero {
 		json.Unmarshal([]byte(attributes), &attr)
 		json.Unmarshal([]byte(talents), &t)
 	}
-	return data.Hero{
-		name, 
-		maxHp, 
-		hp, 
-		race, 
-		gender, 
-		weight, 
-		float64(height), 
-		float64(money), 
-		attr,
-		t,
-		}
+	h := data.Hero
+	h.Name = name
+	h.MaxHp = maxHp
+	h.Hp = hp
+	h.Race = race
+	h.Gender = gender
+	h.Weight = weight
+	h.Height = height
+	h.Money = money
 }
+
+func GetAttribute(name string, attr string) {
+
+}
+
+func GetTalent(name string, tal string) {
+	
+}
+
+func getAttributes(name string) {
+
+}
+
+func getTalents(name string) {
+
+}
+

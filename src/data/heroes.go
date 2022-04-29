@@ -1,10 +1,12 @@
 package data
 
 import (
+	"database/sql"
 	"dicebot/db"
 	"encoding/json"
 	"io"
 	"log"
+
 	"github.com/antonholmquist/jason"
 )
 
@@ -22,73 +24,34 @@ type Hero struct {
 	Talents    map[string]int `json:"talents"`
 }
 
-// typedef for list of heroes
-type Heroes []*Hero
-
-func (h *Heroes) ToJSON(w io.Writer) error {
+func (h *Hero) ToJSON(w io.Writer) error {
 	e := json.NewEncoder(w)
 	return e.Encode(h)
 }
 
-func GetHeroes() Heroes {
-	heroList = nil
+func GetHeroInfo(name string) Hero {
 	db, err := db.GetDBConnection()
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
 
-	rows, err := db.Query("SELECT * FROM heroes")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for rows.Next() {
-		var h Hero
-
-		err = rows.Scan(&h.Name, &h.MaxHp, &h.Hp, &h.Race, &h.Gender, &h.Class, &h.Weight, &h.Height, &h.Money)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		attJSON, _ := jason.NewObjectFromBytes([]byte(att))
-		h.Attributes = attJSON
-		talJSON, _ := jason.NewObjectFromBytes([]byte(tal))
-		h.Talents = talJSON
-
-		heroList = append(heroList, &h)
-	}
-
-	return heroList
+	h := GetHero(name, db)
+	//h.Attributes  = getHeroAttributes(h, db)
+	//h.Talents = getHeroTalents(h)
 }
 
-func GetHeroByName(name string) *Hero {
-	db, err := db.GetDBConnection()
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
-
+func GetHero(name string, db *sql.DB) Hero {
 	var h Hero
-	var att string
-	var tal string
-	err = db.QueryRow("SELECT * FROM heroes WHERE name=?", name).Scan(&h.Name, &h.MaxHp, &h.Hp, &h.Race, &h.Gender, &h.Weight, &h.Height, &h.Money, &att, &tal)
+	err := db.QueryRow("SELECT * FROM heroes WHERE name= ?", name).Scan(&h.Name, &h.MaxHp, &h.Hp, &h.Race, &h.Gender, &h.Weight, &h.Height, &h.Money)
 	if err != nil {
 		log.Fatal(err)
 	}
-	attJSON, _ := jason.NewObjectFromBytes([]byte(att))
-	h.Attributes = attJSON
-	talJSON, _ := jason.NewObjectFromBytes([]byte(tal))
-	h.Talents = talJSON
 
-	heroList = append(heroList, &h)
-
-	return &h
+	return h
 }
 
-func GetHeroField(name string, field string) interface{} {
-	// if attributes/talents contains field -> get attribute/talent
-	
+func GetHeroField(name string, field string) interface{} {	
 	db, err := db.GetDBConnection()
 	if err != nil {
 		log.Fatal(err)
@@ -104,21 +67,52 @@ func GetHeroField(name string, field string) interface{} {
 	return f
 }
 
-func GetHeroAttribute(name string, attribute string) jason.Object {
+func GetHeroAttribute(name string, attribute string) int {
 	db, err := db.GetDBConnection()
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
 
-	var a string
-	var v string
-	err = db.QueryRow("SELECT attribute, value FROM hero_attributes WHERE name=? AND attribute = ?", name, attribute).Scan(&f, &v)
+	var v int
+	err = db.QueryRow("SELECT value FROM hero_attributes WHERE name=? AND attribute = ?", name, attribute).Scan(&v)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// make json response
+	return v
+}
+
+func GetHeroTalent(name string, tal string) int {
+	db, err := db.GetDBConnection()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	var v int
+	err = db.QueryRow("SELECT value FROM hero_talents WHERE name= ? AND talent = ?", name, tal).Scan(&v)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return v
+}
+
+func GetTalent(tal string) Talent {
+	db, err := db.GetDBConnection()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	var t Talent
+	err = db.QueryRow("SELECT name, attr1, attr2, attr3 FROM talents WHERE name=?", tal).Scan(&t.Name, &t.Attr1, &t.Attr2, &t.Attr3)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return t
 }
 
 func SetHeroField(name string, field string, value interface{}) {
@@ -131,14 +125,57 @@ func SetHeroField(name string, field string, value interface{}) {
 	db.QueryRow("UPDATE heroes SET ? = ? WHERE name = ?", field, value, name)
 }
 
+func SetHeroAttribute(name string, field string, value interface{}) {
+	db, err := db.GetDBConnection()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	db.QueryRow("UPDATE hero_attributes SET ? = ? WHERE name = ?", field, value, name)
+}
+
+func SetHeroTalent(name string, field string, value interface{}) {
+	db, err := db.GetDBConnection()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	db.QueryRow("UPDATE hero_talents SET ? = ? WHERE name = ?", field, value, name)
+}
+
+func getHeroAttributes(h Hero, db *sql.DB) Attributes {
+	var a Attributes
+	db.QueryRow("SELECT attribute, value FROM hero_attributes WHERE name = ?", h.Name).Scan(&a.Courage, &a.Cleverness, &a.Intuition, &a.Agility, &a.Charisma, &a.Dexterity, &a.Constitution, &a.Strength)
+	
+	return a
+}
+
+func getHeroTalents(h Hero, db *sql.DB) {
+	// TODO Talents
+	//a := Attributes
+	//db.QueryRow("SELECT talent, value FROM hero_attributes WHERE name = ?", h.Name).Scan(&a.Courage, &a.Cleverness, &a.Intuition, &a.Agility, &a.Charisma, &a.Dexterity, &a.Constitution, &a.Strength)
+	
+	//return a
+}
+
 var heroList []*Hero
-attributes[8] := [
-	"Mut",
-	"Klugheit",
-	"Intuition",
-	"Geschicklichkeit",
-	"Charisma",
-	"Fingerfertigkeit",
-	"Konstitution",
-	"Körperkraft"
-]
+
+type Talent struct {
+	Name string `json: "name"`
+	Attr1 int `json: "attr1"`
+	Attr2 int `json: "attr2"`
+	Attr3 int `json: "attr3"`
+}
+
+type Attributes struct {
+	Courage int `json: "mut"`
+	Cleverness int `json: "klugheit"`
+	Intuition int `json: ""`
+	Agility int `json: ""`
+	Charisma int `json: ""`
+	Dexterity int `json: ""`
+	Constitution int `json: ""`
+	Strength int `json: ""`
+}
